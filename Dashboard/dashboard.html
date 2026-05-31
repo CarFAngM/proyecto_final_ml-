@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<title>GitHub Data Science Repositories</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 1366px;
+    height: 768px;
+    overflow: hidden;
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    font-size: 12px;
+    background: #F6F8FA;
+    color: #1F2328;
+  }
+
+  /* ─── PAGE GRID ─── */
+  .page {
+    width: 1366px;
+    height: 768px;
+    display: grid;
+    grid-template-rows: 42px 100px 1fr 1fr;
+    grid-template-columns: 1fr;
+    background: #F6F8FA;
+    overflow: hidden;
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    background: #24292F;
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    gap: 10px;
+    border-bottom: 1px solid #30363D;
+  }
+  .header svg { width: 20px; height: 20px; fill: white; flex-shrink: 0; }
+  .header h1 { font-size: 13px; font-weight: 600; color: #E6EDF3; letter-spacing: .01em; }
+  .header-sep { width: 1px; height: 16px; background: #444C56; margin: 0 2px; }
+  .header-sub { font-size: 11px; color: #8B949E; }
+  .header-date { margin-left: auto; font-size: 11px; color: #8B949E; }
+
+  /* ─── KPI ROW ─── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    padding: 8px 14px 6px;
+    align-items: stretch;
+    overflow: hidden;
+  }
+  .kpi {
+    background: #fff;
+    border: 1px solid #D0D7DE;
+    border-radius: 6px;
+    padding: 7px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-top: 3px solid var(--accent);
+    overflow: hidden;
+  }
+  .kpi-label {
+    font-size: 10px; color: #57606A;
+    text-transform: uppercase; letter-spacing: .06em; font-weight: 600;
+  }
+  .kpi-value {
+    font-size: 22px; font-weight: 300; color: var(--accent);
+    line-height: 1.1; margin: 3px 0 2px;
+  }
+  .kpi-value span { font-size: 12px; font-weight: 600; }
+  .kpi-sub { font-size: 10px; color: #8B949E; }
+
+  /* ─── CHART AREA ─── */
+  .charts-row {
+    display: grid;
+    gap: 8px;
+    padding: 4px 14px 8px;
+    min-height: 0;
+    align-items: stretch;
+  }
+  .row1 { grid-template-columns: 2.1fr 1fr 1.8fr; }
+  .row2 { grid-template-columns: 1.65fr 1.65fr 1.7fr; }
+
+  .card {
+    background: #fff;
+    border: 1px solid #D0D7DE;
+    border-radius: 6px;
+    padding: 10px 12px 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 600; color: #1F2328; margin-bottom: 1px;
+  }
+  .card-sub { font-size: 10px; color: #8B949E; margin-bottom: 5px; }
+
+  .chart-box {
+    flex: 1; position: relative; min-height: 0; overflow: hidden;
+  }
+  .chart-box canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100% !important; height: 100% !important;
+  }
+
+  /* ─── TOP 8 LIST ─── */
+  .top8-list { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .top8-item {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 18px 1fr 80px 56px 40px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 6px;
+    border-bottom: 1px solid #EAEEF2;
+    min-height: 0;
+  }
+  .top8-item:last-child { border-bottom: none; }
+  .top8-rank { font-size: 10px; color: #8B949E; font-weight: 600; text-align: center; }
+  .top8-name {
+    font-size: 11px; font-weight: 600; color: #0969DA;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .top8-lang {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 10px; color: #57606A; white-space: nowrap; overflow: hidden;
+  }
+  .lang-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .top8-stars { font-size: 11px; font-weight: 600; color: #1F2328; text-align: right; }
+  .top8-spd { font-size: 10px; color: #2DA44E; font-weight: 600; text-align: right; }
+
+  /* ─── TABLE HEADER ─── */
+  .top8-header {
+    display: grid;
+    grid-template-columns: 18px 1fr 80px 56px 40px;
+    gap: 6px;
+    padding: 3px 6px 5px;
+    border-bottom: 2px solid #D0D7DE;
+    flex-shrink: 0;
+  }
+  .top8-header span {
+    font-size: 9.5px; font-weight: 600; color: #8B949E;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .top8-header span:nth-child(3),
+  .top8-header span:nth-child(4),
+  .top8-header span:nth-child(5) { text-align: right; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.38.6.1.82-.26.82-.58v-2.02c-3.34.72-4.04-1.61-4.04-1.61-.54-1.38-1.32-1.75-1.32-1.75-1.08-.74.08-.72.08-.72 1.2.08 1.83 1.23 1.83 1.23 1.06 1.82 2.78 1.3 3.46.99.1-.77.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02 0 2.04.13 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.48 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.22.69.83.57C20.57 21.8 24 17.3 24 12 24 5.37 18.63 0 12 0z"/></svg>
+    <h1>GitHub Data Science Repositories</h1>
+    <div class="header-sep"></div>
+    <div class="header-sub">Análisis Exploratorio</div>
+    <div class="header-date">Mayo 2026</div>
+  </div>
+
+  <!-- KPI ROW -->
+  <div class="kpi-row">
+    <div class="kpi" style="--accent:#0969DA">
+      <div class="kpi-label">Repositorios</div>
+      <div class="kpi-value">199</div>
+      <div class="kpi-sub">Top repos de data science</div>
+    </div>
+    <div class="kpi" style="--accent:#2DA44E">
+      <div class="kpi-label">Total Stars</div>
+      <div class="kpi-value">2.54<span>M</span></div>
+      <div class="kpi-sub">Suma acumulada de estrellas</div>
+    </div>
+    <div class="kpi" style="--accent:#3572A5">
+      <div class="kpi-label">Lenguaje Dominante</div>
+      <div class="kpi-value" style="font-size:20px;font-weight:600;">Python</div>
+      <div class="kpi-sub">90 repos · 45% del dataset</div>
+    </div>
+    <div class="kpi" style="--accent:#BF8700">
+      <div class="kpi-label">Máx. Stars / Día</div>
+      <div class="kpi-value">45.1</div>
+      <div class="kpi-sub">ML-For-Beginners (Microsoft)</div>
+    </div>
+    <div class="kpi" style="--accent:#CF222E">
+      <div class="kpi-label">Issues Abiertos</div>
+      <div class="kpi-value">61<span>,825</span></div>
+      <div class="kpi-sub">Total acumulado</div>
+    </div>
+  </div>
+
+  <!-- ROW 1 -->
+  <div class="charts-row row1">
+    <div class="card">
+      <div class="card-title">Top 15 Repositorios por Estrellas</div>
+      <div class="card-sub">Número total de estrellas en GitHub</div>
+      <div class="chart-box"><canvas id="c1"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Lenguajes</div>
+      <div class="card-sub">Repos por lenguaje principal</div>
+      <div class="chart-box"><canvas id="c2"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top 10 Propietarios por Stars Totales</div>
+      <div class="card-sub">Suma de estrellas de todos sus repositorios</div>
+      <div class="chart-box"><canvas id="c3"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 2 -->
+  <div class="charts-row row2">
+    <div class="card">
+      <div class="card-title">Top 12 por Crecimiento (Stars/Día)</div>
+      <div class="card-sub">Velocidad de acumulación desde su creación</div>
+      <div class="chart-box"><canvas id="c4"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Distribución de Licencias</div>
+      <div class="card-sub">Licencias más utilizadas en el dataset</div>
+      <div class="chart-box"><canvas id="c5"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top 8 Repositorios</div>
+      <div class="card-sub">Ranking por estrellas totales</div>
+      <div class="top8-header">
+        <span></span>
+        <span>Repositorio</span>
+        <span>Lenguaje</span>
+        <span>Stars</span>
+        <span>S/Día</span>
+      </div>
+      <div class="top8-list" id="top8"></div>
+    </div>
+  </div>
+
+</div>
+<script>
+// ── DATA ── [name, owner, stars, forks, open_issues, language, license, archived, age_days, spd]
+const D = [
+["ML-For-Beginners","microsoft",85813,20812,7,"Jupyter Notebook","MIT",false,1901,45.12],
+["superset","apache",72867,17315,1265,"TypeScript","Apache 2.0",false,3952,18.43],
+["scikit-learn","scikit-learn",66103,27026,2022,"Python","BSD 3-Clause",false,5751,11.49],
+["keras","keras-team",64072,19775,187,"Python","Apache 2.0",false,4068,15.75],
+["30-Days-Of-Python","Asabeneh",62659,11893,123,"Python","—",false,2370,26.43],
+["pandas","pandas-dev",48777,19958,3265,"Python","BSD 3-Clause",false,5745,8.49],
+["PythonDataScienceHandbook","jakevdp",48106,18943,231,"Jupyter Notebook","MIT",false,3566,13.49],
+["Made-With-ML","GokuMohandas",47670,7524,25,"Jupyter Notebook","MIT",false,2750,17.33],
+["airflow","apache",45441,17066,1744,"Python","Apache 2.0",false,4051,11.21],
+["streamlit","streamlit",44610,4262,1304,"Python","Apache 2.0",false,2458,18.14],
+["gradio","gradio-app",42610,3470,469,"Python","Apache 2.0",false,2705,15.75],
+["ray","ray-project",42558,7578,3517,"Python","Apache 2.0",false,3490,12.19],
+["Data-Science-For-Beginners","microsoft",35347,7197,4,"Jupyter Notebook","MIT",false,1900,18.59],
+["500-AI-ML-Projects","ashishpatel26",33640,7139,64,"—","—",false,1960,17.15],
+["spaCy","explosion",33579,4682,204,"Python","MIT",false,4335,7.74],
+["ML-From-Scratch","eriklindernoren",31467,5270,73,"Python","MIT",false,3387,9.29],
+["pytorch-lightning","Lightning-AI",31142,3722,1009,"Python","Apache 2.0",false,2604,11.95],
+["AI-Expert-Roadmap","AMAI-GmbH",30973,2580,18,"JavaScript","MIT",false,2030,15.25],
+["awesome-datascience","academic",29213,6516,1,"—","MIT",false,4333,6.74],
+["data-science-ipython-notebooks","donnemartin",29086,8031,46,"Python","Other",false,4131,7.04],
+["applied-ml","eugeneyan",28860,3844,5,"—","MIT",false,2142,13.47],
+["d2l-en","d2l-ai",28851,5064,208,"Python","Other",false,2777,10.39],
+["reflex","reflex-dev",28425,1723,284,"Python","Apache 2.0",false,1300,21.85],
+["Probabilistic-Programming","CamDavidsonPilon",28145,7925,204,"Jupyter Notebook","MIT",false,4870,5.78],
+["go (datasciencemasters)","datasciencemasters",26123,6129,43,"—","Unlicense",false,4658,5.61],
+["fastbook","fastai",24966,9463,178,"Jupyter Notebook","Other",false,2269,11.00],
+["dash","plotly",24191,2283,555,"Python","MIT",false,4055,5.96],
+["pandas-ai","sinaptik-ai",23542,2316,20,"Python","Other",false,1120,21.00],
+["best-of-ml-python","lukasmasuch",23470,3112,46,"—","CC BY-SA",false,1994,11.76],
+["matplotlib","matplotlib",22810,8339,1474,"Python","—",false,5566,4.10],
+["prefect","PrefectHQ",22416,2305,849,"Python","Apache 2.0",false,2878,7.79],
+["recommenders","recommenders-team",21702,3321,179,"Python","MIT",false,2796,7.76],
+["data-science (ossu)","ossu",21226,4077,4,"—","Other",false,3618,5.87],
+["marimo","marimo-team",21011,1093,614,"Python","Apache 2.0",false,1006,20.86],
+["stanford-cs-229","afshinea",19394,4161,20,"—","MIT",false,2842,6.82],
+["akshare","akfamily",19381,3177,16,"Python","MIT",false,2419,8.01],
+["ml-for-trading","stefan-jansen",17337,5128,18,"Jupyter Notebook","—",false,2929,5.92],
+["ML-YouTube-Courses","dair-ai",17198,2104,21,"—","CC0 1.0",false,1786,9.62],
+["ipython","ipython",16699,4474,1588,"Python","BSD 3-Clause",false,5851,2.85],
+["Awesome-pytorch-list","bharathgs",16504,2831,14,"—","—",false,3363,4.91],
+["gensim","piskvorky",16411,4410,437,"Python","LGPL 2.1",false,5574,2.94],
+["ds-cheatsheets","FavioVazquez",16220,4057,13,"—","MIT",false,2704,6.00],
+["dvc","treeverse",15602,1296,174,"Python","Apache 2.0",false,3360,4.64],
+["dagster","dagster-io",15524,2124,2656,"Python","Apache 2.0",false,2938,5.28],
+["awesome-bigdata","oxnr",14392,2582,45,"—","MIT",false,4334,3.32],
+["nni","microsoft",14354,1861,415,"Python","MIT",true,2907,4.94],
+["Virgilio","virgili0",14336,2489,27,"Jupyter Notebook","Other",false,2622,5.47],
+["awesome-mlops","visenger",13906,2060,39,"—","—",false,2265,6.14],
+["seaborn","mwaskom",13876,2113,220,"Python","BSD 3-Clause",false,5080,2.73],
+["fg-data-profiling","Data-Centric-AI",13556,1789,320,"Python","MIT",false,3780,3.59],
+["python-training","jpmorganchase",13209,2131,0,"Jupyter Notebook","Apache 2.0",false,2487,5.31],
+["RD-Agent","microsoft",13061,1610,178,"Python","MIT",false,774,16.85],
+["Ai-Learn","tangyudi",12987,2645,20,"—","—",false,2301,5.64],
+["trino","trinodb",12825,3607,2613,"Java","Apache 2.0",false,2675,4.79],
+["python-ml-book","rasbt",12615,4390,13,"Jupyter Notebook","MIT",false,3935,3.21],
+["AI-Papers-of-the-Week","dair-ai",12431,784,0,"—","—",false,1224,10.15],
+["allennlp","allenai",11893,2222,91,"Python","Apache 2.0",true,3288,3.62],
+["OpenRefine","OpenRefine",11830,2134,717,"Java","BSD 3-Clause",false,4962,2.38],
+["ludwig","ludwig-ai",11697,1219,12,"Python","Apache 2.0",false,2697,4.34],
+["great_expectations","great-expectations",11513,1749,42,"Python","Apache 2.0",false,3170,3.63],
+["cleanlab","cleanlab",11471,893,104,"Python","Apache 2.0",false,2928,3.92],
+["statsmodels","statsmodels",11407,3336,2969,"Python","BSD 3-Clause",false,5452,2.09],
+["wandb","wandb",11070,871,855,"Python","MIT",false,3341,3.31],
+["sagemaker-examples","aws",10925,6976,845,"Jupyter Notebook","Apache 2.0",false,3128,3.49],
+["kedro","kedro-org",10863,1036,175,"Python","Apache 2.0",false,2585,4.20],
+["numerical-linear-algebra","fastai",10863,2675,21,"Jupyter Notebook","—",false,3287,3.30],
+["fiftyone","voxel51",10711,760,670,"Python","Apache 2.0",false,2215,4.83],
+["mlcourse.ai","Yorko",10596,5713,2,"Python","Other",false,3365,3.15],
+["mit-deep-learning","lexfridman",10441,2206,17,"Jupyter Notebook","MIT",false,3416,3.06],
+["modin","modin-project",10388,673,710,"Python","Apache 2.0",false,2886,3.60],
+["ml-systems-design","chiphuyen",10372,1609,11,"HTML","—",false,2365,4.38],
+["autogluon","autogluon",10339,1149,397,"Python","Apache 2.0",false,2483,4.16],
+["tpot","EpistasisLab",10050,1566,311,"Jupyter Notebook","LGPL 3.0",false,3847,2.61],
+["data-science-interviews","alexeygrigorev",9999,2144,10,"HTML","CC BY 4.0",false,2266,4.41],
+["PySyft","OpenMined",9888,2001,67,"Python","Apache 2.0",false,3224,3.07],
+["cookiecutter-data-science","drivendataorg",9858,2629,32,"Python","MIT",false,3851,2.56],
+["computervision-recipes","microsoft",9853,1204,111,"Jupyter Notebook","MIT",false,2651,3.72],
+["pyod","yzhao062",9845,1473,226,"Python","BSD 2-Clause",false,3147,3.13],
+["pycaret","pycaret",9790,1861,14,"Python","Other",false,2366,4.14],
+["sktime","sktime",9763,2173,2333,"Python","BSD 3-Clause",false,2748,3.55],
+["PyMuPDF","pymupdf",9725,722,58,"Python","AGPL 3.0",false,4970,1.96],
+["cudf","rapidsai",9631,1053,1273,"C++","Apache 2.0",false,3297,2.92],
+["data-science-from-scratch","joelgrus",9603,4717,78,"Python","MIT",false,4207,2.28],
+["tflearn","tflearn",9587,2368,579,"Python","Other",false,3698,2.59],
+["xgo","goplus",9418,561,62,"Go","Apache 2.0",false,3809,2.47],
+["darts","unit8co",9375,1002,243,"Python","Apache 2.0",false,2802,3.34],
+["tsfresh","blue-yonder",9215,1266,73,"Jupyter Notebook","MIT",false,3489,2.64],
+["catboost","catboost",8945,1287,700,"C++","Apache 2.0",false,3225,2.77],
+["machine_learning_examples","lazyprogrammer",8869,6421,33,"Python","—",false,4307,2.06],
+["gridstudio","ricklamers",8828,1486,42,"JavaScript","AGPL 3.0",true,2489,3.55],
+["Grand-DS-Materials","krishnaik06",8768,4438,85,"Python","GPL 2.0",false,971,9.02],
+["mage-ai","mage-ai",8728,965,590,"Python","Apache 2.0",false,1461,5.97],
+["Data-Science-Notes","fengdu78",8558,3121,15,"Jupyter Notebook","—",false,2484,3.44],
+["vaex","vaexio",8504,603,551,"Python","MIT",false,4249,2.00],
+["python-small-examples","jackzhenguo",8136,1789,3,"Python","—",false,2373,3.43],
+["dowhy","py-why",8114,1032,185,"Python","MIT",false,2907,2.79],
+["ml-roadmap","mrdbourke",7856,1172,12,"—","MIT",false,2137,3.67],
+["growthbook","growthbook",7781,748,828,"TypeScript","Other",false,1835,4.24],
+["featuretools","alteryx",7644,908,162,"Python","BSD 3-Clause",false,3172,2.41],
+["vectorbt","polakowo",7568,972,138,"Python","Other",false,3105,2.44],
+["evidently","evidentlyai",7498,847,274,"Jupyter Notebook","Apache 2.0",false,1998,3.75],
+["h2o-3","h2oai",7481,2032,2857,"Jupyter Notebook","Apache 2.0",false,4457,1.68],
+["Book3-Elements-Math","Visualize-ML",7467,1342,13,"Jupyter Notebook","—",false,1448,5.15],
+["industry-ml","firmai",7461,1246,2,"Jupyter Notebook","—",false,2571,2.90],
+["folium","python-visualization",7368,2253,76,"Python","Other",false,4756,1.55],
+["data-scientist-roadmap","MrMimic",7352,1918,0,"Jupyter Notebook","GPL 3.0",false,3268,2.25],
+["python-ml-book-2nd","rasbt",7201,2805,32,"Jupyter Notebook","MIT",false,3384,2.13],
+["imbalanced-learn","scikit-learn-contrib",7102,1346,69,"Python","MIT",false,4292,1.65],
+["roughViz","jwilber",7082,237,14,"JavaScript","MIT",false,2432,2.91],
+["TabPFN","PriorLabs",7074,697,41,"Python","Other",false,1415,5.00],
+["feast","feast-dev",7039,1324,347,"Python","Apache 2.0",false,2714,2.59],
+["flyte","flyteorg",7038,819,206,"Go","Apache 2.0",false,2399,2.93],
+["stanford-cs-230","afshinea",6982,1440,6,"—","MIT",false,2728,2.56],
+["boltons","mahmoud",6884,391,70,"Python","Other",false,4834,1.42],
+["Data-Analysis-ML-Projects","rhiever",6688,2105,14,"Jupyter Notebook","—",false,4111,1.63],
+["awesome-R","qinwf",6461,1510,25,"R","—",false,4320,1.50],
+["ML-Course-Notes","dair-ai",6453,859,5,"—","Other",false,1521,4.24],
+["lance","lance-format",6432,664,1154,"Rust","Apache 2.0",false,1409,4.56],
+["kaggle-solutions","faridrashidi",6425,2379,0,"Astro","MIT",false,2730,2.35],
+["data-juicer","datajuicer",6413,371,67,"Python","Apache 2.0",false,1019,6.29],
+["smile","haifengl",6372,1146,0,"Java","Other",false,4195,1.52],
+["evidence","evidence-dev",6351,356,264,"JavaScript","MIT",false,1816,3.50],
+["data-science-blogs","rushter",6347,1766,13,"Python","—",false,3937,1.61],
+["pachyderm","pachyderm",6294,574,939,"Go","Apache 2.0",false,4272,1.47],
+["aim","aimhubio",6119,393,462,"Python","Apache 2.0",false,2542,2.41],
+["snorkel","snorkel-team",5962,854,17,"Python","Apache 2.0",false,3733,1.60],
+["river","online-ml",5819,626,91,"Python","BSD 3-Clause",false,2669,2.18],
+["DataSciencePython","ujjwalkarn",5767,1533,13,"Python","MIT",false,3875,1.49],
+["orange3","biolab",5608,1097,115,"Python","Other",false,4831,1.16],
+["knowledge-repo","airbnb",5534,682,137,"Python","Apache 2.0",false,3559,1.55],
+["zenml","zenml-io",5414,615,158,"Python","Apache 2.0",false,2004,2.70],
+["lux","lux-org",5384,382,90,"Python","Apache 2.0",false,2321,2.32],
+["2026-AI-College-Jobs","speedyapply",5283,205,1,"—","—",false,613,8.60],
+["SynapseML","microsoft",5229,861,394,"Scala","MIT",false,3267,1.60],
+["ai-data-science-team","business-science",5222,912,29,"Python","MIT",false,521,10.00],
+["gluonts","awslabs",5189,818,468,"Python","Apache 2.0",false,2558,2.03],
+["mlxtend","rasbt",5144,905,159,"Python","Other",false,4294,1.20],
+["dtale","man-group",5112,436,61,"TypeScript","LGPL 2.1",false,2497,2.05],
+["zero-to-mastery-ml","mrdbourke",5063,3945,43,"Jupyter Notebook","—",false,2428,2.08],
+["r4ds","hadley",5053,4416,22,"R","Other",false,3946,1.28],
+["danfojs","javascriptdata",5048,224,101,"TypeScript","MIT",false,2194,2.30],
+["machine_learning_complete","Nyandwi",5008,838,2,"Jupyter Notebook","MIT",false,1694,2.95],
+["course-v3","fastai",4920,3482,53,"Jupyter Notebook","Apache 2.0",false,2774,1.77],
+["pytorch-forecasting","sktime",4895,866,751,"Python","MIT",false,2143,2.28],
+["matplotplusplus","alandefreitas",4878,378,80,"C++","MIT",false,2087,2.34],
+["statsforecast","Nixtla",4781,368,151,"Python","Apache 2.0",false,1635,2.92],
+["Flux.jl","FluxML",4725,619,191,"Julia","Other",false,3697,1.28],
+["ML-foundations","jonkrohn",4715,2265,8,"Jupyter Notebook","MIT",false,2219,2.12],
+["DeepAnalyze","ruc-datalab",4152,679,22,"Python","MIT",false,217,19.05],
+["maestro","Netflix",3777,285,29,"Java","Apache 2.0",false,760,4.96],
+["leafmap","opengeos",3700,460,0,"Python","MIT",false,1894,1.95],
+];
+
+// ─── GitHub language colors ───────────────────
+const LC = {
+  'Python':          '#3572A5',
+  'Jupyter Notebook':'#DA5B0B',
+  'TypeScript':      '#3178C6',
+  'JavaScript':      '#F1E05A',
+  'C++':             '#F34B7D',
+  'Java':            '#B07219',
+  'Go':              '#00ADD8',
+  'R':               '#198CE7',
+  'Rust':            '#DEA584',
+  'HTML':            '#E34C26',
+  'Scala':           '#DC322F',
+  'Julia':           '#A270BA',
+  'Astro':           '#FF5A03',
+  '—':               '#8B949E',
+};
+
+// ─── Chart palette (GitHub-inspired) ─────────
+const PAL = [
+  '#0969DA','#2DA44E','#BF8700','#CF222E','#8250DF',
+  '#1A7F37','#0550AE','#953800','#6E40C9','#218BFF',
+  '#57606A','#3572A5',
+];
+
+Chart.defaults.font.family = "-apple-system, 'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size   = 10;
+Chart.defaults.color       = '#57606A';
+Chart.defaults.borderColor = '#EAEEF2';
+
+// ─── C1: Top 15 by stars ──────────────────────
+{
+  const top = [...D].sort((a,b)=>b[2]-a[2]).slice(0,15);
+  new Chart(document.getElementById('c1'), {
+    type:'bar',
+    data:{
+      labels: top.map(r=>r[0]),
+      datasets:[{
+        data: top.map(r=>r[2]),
+        backgroundColor: top.map(r => (LC[r[5]]||'#0969DA')+'bb'),
+        borderColor:     top.map(r =>  LC[r[5]]||'#0969DA'),
+        borderWidth:1, borderRadius:3,
+      }]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: c=>' '+c.raw.toLocaleString()+' ⭐' } }
+      },
+      scales:{
+        x:{ grid:{color:'#EAEEF2'}, ticks:{ callback:v=>(v/1000).toFixed(0)+'k', font:{size:9} } },
+        y:{ grid:{display:false}, ticks:{ font:{size:9.5} } }
+      }
+    }
+  });
+}
+
+// ─── C2: Language donut ───────────────────────
+{
+  const lc={};
+  D.forEach(r=>{ const l=r[5]||'—'; lc[l]=(lc[l]||0)+1; });
+  const s=Object.entries(lc).sort((a,b)=>b[1]-a[1]);
+  const top6=s.slice(0,6);
+  const oth=s.slice(6).reduce((a,[,v])=>a+v,0);
+  if(oth) top6.push(['Otros',oth]);
+  new Chart(document.getElementById('c2'), {
+    type:'doughnut',
+    data:{
+      labels: top6.map(([k])=>k),
+      datasets:[{
+        data: top6.map(([,v])=>v),
+        backgroundColor: top6.map(([k])=>(LC[k]||PAL[top6.indexOf([k,0])])+'dd'),
+        borderColor:'#fff', borderWidth:2, hoverOffset:5,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'55%',
+      plugins:{
+        legend:{
+          position:'bottom',
+          labels:{ padding:6, font:{size:9.5}, boxWidth:9, usePointStyle:true, pointStyle:'circle' }
+        },
+        tooltip:{ callbacks:{ label: c=>` ${c.label}: ${c.raw}` } }
+      }
+    }
+  });
+}
+
+// ─── C3: Top 10 owners ────────────────────────
+{
+  const os={};
+  D.forEach(r=>{ os[r[1]]=(os[r[1]]||0)+r[2]; });
+  const top10=Object.entries(os).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  new Chart(document.getElementById('c3'), {
+    type:'bar',
+    data:{
+      labels: top10.map(([k])=>k),
+      datasets:[{
+        data: top10.map(([,v])=>v),
+        backgroundColor: PAL.map(c=>c+'bb'),
+        borderColor: PAL,
+        borderWidth:1, borderRadius:3,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: c=>' '+c.raw.toLocaleString()+' ⭐' } }
+      },
+      scales:{
+        x:{ grid:{display:false}, ticks:{ font:{size:9}, maxRotation:28 } },
+        y:{ grid:{color:'#EAEEF2'}, ticks:{ callback:v=>(v/1000).toFixed(0)+'k', font:{size:9} } }
+      }
+    }
+  });
+}
+
+// ─── C4: Top 12 stars/day ─────────────────────
+{
+  const top=[...D].sort((a,b)=>b[9]-a[9]).slice(0,12);
+  new Chart(document.getElementById('c4'), {
+    type:'bar',
+    data:{
+      labels: top.map(r=>r[0]),
+      datasets:[{
+        data: top.map(r=>r[9]),
+        backgroundColor:'#0969DA99',
+        borderColor:'#0969DA',
+        borderWidth:1, borderRadius:3,
+      }]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: c=>' '+c.raw.toFixed(2)+' stars/día' } }
+      },
+      scales:{
+        x:{ grid:{color:'#EAEEF2'}, ticks:{ font:{size:9} } },
+        y:{ grid:{display:false}, ticks:{ font:{size:9.5} } }
+      }
+    }
+  });
+}
+
+// ─── C5: License distribution ─────────────────
+{
+  const lc={};
+  D.forEach(r=>{
+    let l=r[6]||'Sin especif.';
+    if(l.includes('MIT'))         l='MIT';
+    else if(l.includes('Apache')) l='Apache 2.0';
+    else if(l.includes('BSD'))    l='BSD';
+    else if(l.includes('GPL')&&!l.includes('LG')) l='GPL';
+    else if(l.includes('LGPL')||l.includes('LG')) l='LGPL';
+    else if(l.includes('AGPL'))   l='AGPL';
+    else if(l.includes('CC'))     l='Creative Commons';
+    else if(l==='Other'||l==='—') l='Sin especif.';
+    lc[l]=(lc[l]||0)+1;
+  });
+  const s=Object.entries(lc).sort((a,b)=>b[1]-a[1]);
+  new Chart(document.getElementById('c5'), {
+    type:'bar',
+    data:{
+      labels: s.map(([k])=>k),
+      datasets:[{
+        data: s.map(([,v])=>v),
+        backgroundColor: PAL.map(c=>c+'bb'),
+        borderColor: PAL,
+        borderWidth:1, borderRadius:3,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: c=>` ${c.raw} repos` } }
+      },
+      scales:{
+        x:{ grid:{display:false}, ticks:{ font:{size:9}, maxRotation:32 } },
+        y:{ grid:{color:'#EAEEF2'}, ticks:{ font:{size:9} } }
+      }
+    }
+  });
+}
+
+// ─── TOP 8 LIST ───────────────────────────────
+{
+  const top8=[...D].sort((a,b)=>b[2]-a[2]).slice(0,8);
+  const maxS=top8[0][2];
+  const el=document.getElementById('top8');
+  el.innerHTML = top8.map((r,i)=>`
+    <div class="top8-item">
+      <div class="top8-rank">${i+1}</div>
+      <div class="top8-name">${r[0]}</div>
+      <div class="top8-lang">
+        <span class="lang-dot" style="background:${LC[r[5]]||'#8B949E'}"></span>
+        ${r[5]}
+      </div>
+      <div class="top8-stars">${r[2].toLocaleString()}</div>
+      <div class="top8-spd">+${r[9].toFixed(1)}</div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
